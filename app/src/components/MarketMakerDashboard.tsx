@@ -9,6 +9,7 @@ export interface MarketParams {
   spreadMargin: number; // Half-spread capture g (e.g. 0.01)
   maxHoldSteps: number; // T_max before hard stop
   numSimulations: number; // N paths to run
+  stepsPerSimulation: number; // Timesteps in each path
 }
 
 export interface SimulationResults {
@@ -33,7 +34,7 @@ const stubSolveMDP = (params: MarketParams): number[] => {
 
 const stubRunMonteCarlo = (params: MarketParams, fCurve: number[]): SimulationResults => {
   // Mocking N simulation runs
-  const steps = 50;
+  const steps = params.stepsPerSimulation;
   const paths: number[][] = [];
   
   for (let i = 0; i < 5; i++) { // Generate 5 representative paths for rendering
@@ -69,7 +70,8 @@ export default function MarketMakerDashboard() {
     volatility: 0.15,
     spreadMargin: 0.01,
     maxHoldSteps: 5,
-    numSimulations: 10000
+    numSimulations: 10000,
+    stepsPerSimulation: 100,
   });
 
   // 2. Custom Override f(t) Curve State
@@ -226,6 +228,20 @@ export default function MarketMakerDashboard() {
                 <option value={10000}>10,000</option>
                 <option value={50000}>50,000</option>
               </select>
+            </div>
+
+            {/* Monte Carlo Step Count Slider */}
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-slate-300">Timesteps in each simulation</span>
+                <span className="font-mono text-emerald-400">{params.stepsPerSimulation} steps</span>
+              </div>
+              <input
+                type="range" min="10" max="400" step="10"
+                value={params.stepsPerSimulation}
+                onChange={e => handleParamChange('stepsPerSimulation', parseInt(e.target.value))}
+                className="w-full accent-emerald-500"
+              />
             </div>
           </div>
 
