@@ -19,7 +19,10 @@ export interface SimulationResults {
   sharpeRatio: number;
   probRuin: number;
   wealthPaths: number[][]; // [pathIndex][timestep]
+  pricePaths: Array<PricePath>
 }
+
+export type PricePath = Array<{price: number, isShock: boolean}>
 
 // --- STUB FUNCTIONS FOR BACKEND/WORKER LOGIC ---
 const stubSolveMDP = (params: MarketParams): number[] => {
@@ -58,7 +61,8 @@ const stubRunMonteCarlo = (params: MarketParams, fCurve: number[]): SimulationRe
     expectedGrowthRate: 0.0024,
     sharpeRatio: 1.42,
     probRuin: 0.012,
-    wealthPaths: paths
+    wealthPaths: paths,
+    pricePaths: []
   };
 };
 
