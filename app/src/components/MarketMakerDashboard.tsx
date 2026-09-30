@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Play, RotateCcw, Sliders, Activity, BarChart3, ShieldAlert } from 'lucide-react';
 import "tailwindcss"
+import { runMonteCarlo } from '../Solver/MonteCarlo';
+import TrajectoryChart from './TrajectoryChart';
+import { solveMDP } from '../Solver/Solver';
 
 // --- TYPES ---
 export interface MarketParams {
@@ -23,48 +26,6 @@ export interface SimulationResults {
 }
 
 export type PricePath = Array<{price: number, isShock: boolean}>
-
-// --- STUB FUNCTIONS FOR BACKEND/WORKER LOGIC ---
-const stubSolveMDP = (params: MarketParams): number[] => {
-  // Mocking backward induction output for optimal f(t)
-  const f = [];
-  const base = params.spreadMargin * 5; // e.g., ~5% initial
-  for (let t = 0; t < params.maxHoldSteps; t++) {
-    f.push(parseFloat((base * Math.pow(0.35, t)).toFixed(4)));
-  }
-  return f;
-};
-
-const stubRunMonteCarlo = (params: MarketParams, fCurve: number[]): SimulationResults => {
-  // Mocking N simulation runs
-  const steps = params.stepsPerSimulation;
-  const paths: number[][] = [];
-  
-  for (let i = 0; i < 5; i++) { // Generate 5 representative paths for rendering
-    let wealth = 100;
-    const path = [wealth];
-    for (let t = 1; t <= steps; t++) {
-      const shock = Math.random() < params.lambdaShock;
-      if (shock) {
-        wealth *= (1 - fCurve[0]); // Shock impact
-      } else {
-        wealth += wealth * fCurve[0] * params.spreadMargin * (Math.random() > 0.5 ? 1 : -0.2);
-      }
-      path.push(parseFloat(wealth.toFixed(2)));
-    }
-    paths.push(path);
-  }
-
-  return {
-    optimalF: fCurve,
-    userF: [...fCurve],
-    expectedGrowthRate: 0.0024,
-    sharpeRatio: 1.42,
-    probRuin: 0.012,
-    wealthPaths: paths,
-    pricePaths: []
-  };
-};
 
 // --- MAIN MONOLITHIC COMPONENT ---
 export default function MarketMakerDashboard() {
@@ -112,13 +73,13 @@ export default function MarketMakerDashboard() {
     
     // Defer to allow UI to show loading spinner state
     setTimeout(() => {
-      const optimalF = stubSolveMDP(params);
+      const optimalF = solveMDP(params);
       if (!useCustomCurve || customF.length !== params.maxHoldSteps) {
         setCustomF(optimalF);
       }
       
       const activeF = useCustomCurve ? customF : optimalF;
-      const simResults = stubRunMonteCarlo(params, activeF);
+      const simResults = runMonteCarlo(params, activeF);
       
       setResults(simResults);
       setIsCalculating(false);
@@ -326,15 +287,7 @@ export default function MarketMakerDashboard() {
               </div>
 
               {/* Simulation Placeholder Chart Box */}
-              <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-xl h-64 flex flex-col justify-between">
-                <h3 className="text-md font-semibold text-slate-200">Monte Carlo Wealth Trajectories</h3>
-                <div className="flex-1 my-2 bg-slate-950 rounded-lg border border-slate-800 p-4 flex items-center justify-center text-slate-600 font-mono text-xs">
-                  [ Render Chart Here: {params.numSimulations.toLocaleString()} Simulated Trajectories ]
-                </div>
-                <p className="text-xs text-slate-500 text-right">
-                  Sample path final values range: $92.40 to $108.12
-                </p>
-              </div>
+              <TrajectoryChart pricePaths={results.pricePaths} wealthPaths={results.wealthPaths}/>
             </>
           ) : (
             /* Empty State */
